@@ -1,0 +1,553 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions name="OrderManagementService"
+    targetNamespace="http://legacy.acme.com/ordermanagement/"
+    xmlns:tns="http://legacy.acme.com/ordermanagement/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+
+    <!-- ================================================================= -->
+    <!-- TYPES                                                             -->
+    <!-- ================================================================= -->
+    <wsdl:types>
+        <xsd:schema targetNamespace="http://legacy.acme.com/ordermanagement/"
+            xmlns:tns="http://legacy.acme.com/ordermanagement/"
+            elementFormDefault="qualified">
+
+            <!-- Common complex types -->
+            <xsd:complexType name="Address">
+                <xsd:sequence>
+                    <xsd:element name="line1" type="xsd:string"/>
+                    <xsd:element name="line2" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="city" type="xsd:string"/>
+                    <xsd:element name="state" type="xsd:string"/>
+                    <xsd:element name="postalCode" type="xsd:string"/>
+                    <xsd:element name="country" type="xsd:string"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <xsd:simpleType name="OrderStatus">
+                <xsd:restriction base="xsd:string">
+                    <xsd:enumeration value="PENDING"/>
+                    <xsd:enumeration value="CONFIRMED"/>
+                    <xsd:enumeration value="SHIPPED"/>
+                    <xsd:enumeration value="DELIVERED"/>
+                    <xsd:enumeration value="CANCELLED"/>
+                </xsd:restriction>
+            </xsd:simpleType>
+
+            <xsd:complexType name="OrderItem">
+                <xsd:sequence>
+                    <xsd:element name="productId" type="xsd:string"/>
+                    <xsd:element name="productName" type="xsd:string"/>
+                    <xsd:element name="quantity" type="xsd:int"/>
+                    <xsd:element name="unitPrice" type="xsd:decimal"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <xsd:complexType name="OrderItemList">
+                <xsd:sequence>
+                    <xsd:element name="item" type="tns:OrderItem" minOccurs="1" maxOccurs="unbounded"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <xsd:complexType name="Order">
+                <xsd:sequence>
+                    <xsd:element name="orderId" type="xsd:string"/>
+                    <xsd:element name="customerId" type="xsd:string"/>
+                    <xsd:element name="orderDate" type="xsd:dateTime"/>
+                    <xsd:element name="status" type="tns:OrderStatus"/>
+                    <xsd:element name="totalAmount" type="xsd:decimal"/>
+                    <xsd:element name="currency" type="xsd:string"/>
+                    <xsd:element name="shippingAddress" type="tns:Address"/>
+                    <xsd:element name="items" type="tns:OrderItemList"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <xsd:complexType name="OrderList">
+                <xsd:sequence>
+                    <xsd:element name="order" type="tns:Order" minOccurs="0" maxOccurs="unbounded"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <!-- Customer types (maps to customers table) -->
+            <xsd:complexType name="Customer">
+                <xsd:sequence>
+                    <xsd:element name="customerId" type="xsd:string"/>
+                    <xsd:element name="legacyCustomerId" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="firstName" type="xsd:string"/>
+                    <xsd:element name="lastName" type="xsd:string"/>
+                    <xsd:element name="email" type="xsd:string"/>
+                    <xsd:element name="phone" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="createdAt" type="xsd:dateTime"/>
+                    <xsd:element name="updatedAt" type="xsd:dateTime"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <xsd:complexType name="CustomerList">
+                <xsd:sequence>
+                    <xsd:element name="customer" type="tns:Customer" minOccurs="0" maxOccurs="unbounded"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <!-- Product types (maps to products table) -->
+            <xsd:complexType name="Product">
+                <xsd:sequence>
+                    <xsd:element name="productId" type="xsd:string"/>
+                    <xsd:element name="sku" type="xsd:string"/>
+                    <xsd:element name="productName" type="xsd:string"/>
+                    <xsd:element name="description" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="unitPrice" type="xsd:decimal"/>
+                    <xsd:element name="active" type="xsd:boolean"/>
+                    <xsd:element name="createdAt" type="xsd:dateTime"/>
+                    <xsd:element name="updatedAt" type="xsd:dateTime"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <xsd:complexType name="ProductList">
+                <xsd:sequence>
+                    <xsd:element name="product" type="tns:Product" minOccurs="0" maxOccurs="unbounded"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <!-- createOrder -->
+            <xsd:element name="CreateOrderRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="customerId" type="xsd:string"/>
+                        <xsd:element name="items" type="tns:OrderItemList"/>
+                        <xsd:element name="shippingAddress" type="tns:Address"/>
+                        <xsd:element name="currency" type="xsd:string" default="USD"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="CreateOrderResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="orderId" type="xsd:string"/>
+                        <xsd:element name="status" type="tns:OrderStatus"/>
+                        <xsd:element name="totalAmount" type="xsd:decimal"/>
+                        <xsd:element name="confirmationMessage" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- getOrderStatus -->
+            <xsd:element name="GetOrderStatusRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="orderId" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="GetOrderStatusResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="orderId" type="xsd:string"/>
+                        <xsd:element name="status" type="tns:OrderStatus"/>
+                        <xsd:element name="lastUpdated" type="xsd:dateTime"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- getOrderDetails -->
+            <xsd:element name="GetOrderDetailsRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="orderId" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="GetOrderDetailsResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="order" type="tns:Order"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- updateOrder -->
+            <xsd:element name="UpdateOrderRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="orderId" type="xsd:string"/>
+                        <xsd:element name="items" type="tns:OrderItemList" minOccurs="0"/>
+                        <xsd:element name="shippingAddress" type="tns:Address" minOccurs="0"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="UpdateOrderResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="orderId" type="xsd:string"/>
+                        <xsd:element name="status" type="tns:OrderStatus"/>
+                        <xsd:element name="message" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- cancelOrder -->
+            <xsd:element name="CancelOrderRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="orderId" type="xsd:string"/>
+                        <xsd:element name="cancellationReason" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="CancelOrderResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="orderId" type="xsd:string"/>
+                        <xsd:element name="status" type="tns:OrderStatus"/>
+                        <xsd:element name="message" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- listOrdersByCustomer -->
+            <xsd:element name="ListOrdersByCustomerRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="customerId" type="xsd:string"/>
+                        <xsd:element name="fromDate" type="xsd:dateTime" minOccurs="0"/>
+                        <xsd:element name="toDate" type="xsd:dateTime" minOccurs="0"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="ListOrdersByCustomerResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="orders" type="tns:OrderList"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- getAllCustomers -->
+            <xsd:element name="GetAllCustomersRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="pageNumber" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="pageSize" type="xsd:int" minOccurs="0"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="GetAllCustomersResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="customers" type="tns:CustomerList"/>
+                        <xsd:element name="totalCount" type="xsd:int"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- createCustomer -->
+            <xsd:element name="CreateCustomerRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="firstName" type="xsd:string"/>
+                        <xsd:element name="lastName" type="xsd:string"/>
+                        <xsd:element name="email" type="xsd:string"/>
+                        <xsd:element name="phone" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="legacyCustomerId" type="xsd:string" minOccurs="0"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="CreateCustomerResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="customerId" type="xsd:string"/>
+                        <xsd:element name="createdAt" type="xsd:dateTime"/>
+                        <xsd:element name="confirmationMessage" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- getAllProducts -->
+            <xsd:element name="GetAllProductsRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="activeOnly" type="xsd:boolean" minOccurs="0"/>
+                        <xsd:element name="pageNumber" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="pageSize" type="xsd:int" minOccurs="0"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="GetAllProductsResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="products" type="tns:ProductList"/>
+                        <xsd:element name="totalCount" type="xsd:int"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- createProduct -->
+            <xsd:element name="CreateProductRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="sku" type="xsd:string"/>
+                        <xsd:element name="productName" type="xsd:string"/>
+                        <xsd:element name="description" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="unitPrice" type="xsd:decimal"/>
+                        <xsd:element name="active" type="xsd:boolean" minOccurs="0" default="true"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="CreateProductResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="productId" type="xsd:string"/>
+                        <xsd:element name="createdAt" type="xsd:dateTime"/>
+                        <xsd:element name="confirmationMessage" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <!-- Fault -->
+            <xsd:element name="OrderFault">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="faultCode" type="xsd:string"/>
+                        <xsd:element name="faultMessage" type="xsd:string"/>
+                        <xsd:element name="timestamp" type="xsd:dateTime"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+        </xsd:schema>
+    </wsdl:types>
+
+    <!-- ================================================================= -->
+    <!-- MESSAGES                                                          -->
+    <!-- ================================================================= -->
+    <wsdl:message name="CreateOrderRequestMessage">
+        <wsdl:part name="parameters" element="tns:CreateOrderRequest"/>
+    </wsdl:message>
+    <wsdl:message name="CreateOrderResponseMessage">
+        <wsdl:part name="parameters" element="tns:CreateOrderResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="GetOrderStatusRequestMessage">
+        <wsdl:part name="parameters" element="tns:GetOrderStatusRequest"/>
+    </wsdl:message>
+    <wsdl:message name="GetOrderStatusResponseMessage">
+        <wsdl:part name="parameters" element="tns:GetOrderStatusResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="GetOrderDetailsRequestMessage">
+        <wsdl:part name="parameters" element="tns:GetOrderDetailsRequest"/>
+    </wsdl:message>
+    <wsdl:message name="GetOrderDetailsResponseMessage">
+        <wsdl:part name="parameters" element="tns:GetOrderDetailsResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="UpdateOrderRequestMessage">
+        <wsdl:part name="parameters" element="tns:UpdateOrderRequest"/>
+    </wsdl:message>
+    <wsdl:message name="UpdateOrderResponseMessage">
+        <wsdl:part name="parameters" element="tns:UpdateOrderResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="CancelOrderRequestMessage">
+        <wsdl:part name="parameters" element="tns:CancelOrderRequest"/>
+    </wsdl:message>
+    <wsdl:message name="CancelOrderResponseMessage">
+        <wsdl:part name="parameters" element="tns:CancelOrderResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="ListOrdersByCustomerRequestMessage">
+        <wsdl:part name="parameters" element="tns:ListOrdersByCustomerRequest"/>
+    </wsdl:message>
+    <wsdl:message name="ListOrdersByCustomerResponseMessage">
+        <wsdl:part name="parameters" element="tns:ListOrdersByCustomerResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="GetAllCustomersRequestMessage">
+        <wsdl:part name="parameters" element="tns:GetAllCustomersRequest"/>
+    </wsdl:message>
+    <wsdl:message name="GetAllCustomersResponseMessage">
+        <wsdl:part name="parameters" element="tns:GetAllCustomersResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="CreateCustomerRequestMessage">
+        <wsdl:part name="parameters" element="tns:CreateCustomerRequest"/>
+    </wsdl:message>
+    <wsdl:message name="CreateCustomerResponseMessage">
+        <wsdl:part name="parameters" element="tns:CreateCustomerResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="GetAllProductsRequestMessage">
+        <wsdl:part name="parameters" element="tns:GetAllProductsRequest"/>
+    </wsdl:message>
+    <wsdl:message name="GetAllProductsResponseMessage">
+        <wsdl:part name="parameters" element="tns:GetAllProductsResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="CreateProductRequestMessage">
+        <wsdl:part name="parameters" element="tns:CreateProductRequest"/>
+    </wsdl:message>
+    <wsdl:message name="CreateProductResponseMessage">
+        <wsdl:part name="parameters" element="tns:CreateProductResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="OrderFaultMessage">
+        <wsdl:part name="parameters" element="tns:OrderFault"/>
+    </wsdl:message>
+
+    <!-- ================================================================= -->
+    <!-- PORT TYPE                                                         -->
+    <!-- ================================================================= -->
+    <wsdl:portType name="OrderManagementPortType">
+
+        <wsdl:operation name="createOrder">
+            <wsdl:input message="tns:CreateOrderRequestMessage"/>
+            <wsdl:output message="tns:CreateOrderResponseMessage"/>
+            <wsdl:fault name="OrderFault" message="tns:OrderFaultMessage"/>
+        </wsdl:operation>
+
+        <wsdl:operation name="getOrderStatus">
+            <wsdl:input message="tns:GetOrderStatusRequestMessage"/>
+            <wsdl:output message="tns:GetOrderStatusResponseMessage"/>
+            <wsdl:fault name="OrderFault" message="tns:OrderFaultMessage"/>
+        </wsdl:operation>
+
+        <wsdl:operation name="getOrderDetails">
+            <wsdl:input message="tns:GetOrderDetailsRequestMessage"/>
+            <wsdl:output message="tns:GetOrderDetailsResponseMessage"/>
+            <wsdl:fault name="OrderFault" message="tns:OrderFaultMessage"/>
+        </wsdl:operation>
+
+        <wsdl:operation name="updateOrder">
+            <wsdl:input message="tns:UpdateOrderRequestMessage"/>
+            <wsdl:output message="tns:UpdateOrderResponseMessage"/>
+            <wsdl:fault name="OrderFault" message="tns:OrderFaultMessage"/>
+        </wsdl:operation>
+
+        <wsdl:operation name="cancelOrder">
+            <wsdl:input message="tns:CancelOrderRequestMessage"/>
+            <wsdl:output message="tns:CancelOrderResponseMessage"/>
+            <wsdl:fault name="OrderFault" message="tns:OrderFaultMessage"/>
+        </wsdl:operation>
+
+        <wsdl:operation name="listOrdersByCustomer">
+            <wsdl:input message="tns:ListOrdersByCustomerRequestMessage"/>
+            <wsdl:output message="tns:ListOrdersByCustomerResponseMessage"/>
+            <wsdl:fault name="OrderFault" message="tns:OrderFaultMessage"/>
+        </wsdl:operation>
+
+        <wsdl:operation name="getAllCustomers">
+            <wsdl:input message="tns:GetAllCustomersRequestMessage"/>
+            <wsdl:output message="tns:GetAllCustomersResponseMessage"/>
+            <wsdl:fault name="OrderFault" message="tns:OrderFaultMessage"/>
+        </wsdl:operation>
+
+        <wsdl:operation name="createCustomer">
+            <wsdl:input message="tns:CreateCustomerRequestMessage"/>
+            <wsdl:output message="tns:CreateCustomerResponseMessage"/>
+            <wsdl:fault name="OrderFault" message="tns:OrderFaultMessage"/>
+        </wsdl:operation>
+
+        <wsdl:operation name="getAllProducts">
+            <wsdl:input message="tns:GetAllProductsRequestMessage"/>
+            <wsdl:output message="tns:GetAllProductsResponseMessage"/>
+            <wsdl:fault name="OrderFault" message="tns:OrderFaultMessage"/>
+        </wsdl:operation>
+
+        <wsdl:operation name="createProduct">
+            <wsdl:input message="tns:CreateProductRequestMessage"/>
+            <wsdl:output message="tns:CreateProductResponseMessage"/>
+            <wsdl:fault name="OrderFault" message="tns:OrderFaultMessage"/>
+        </wsdl:operation>
+
+    </wsdl:portType>
+
+    <!-- ================================================================= -->
+    <!-- BINDING (SOAP 1.1, document/literal)                              -->
+    <!-- ================================================================= -->
+    <wsdl:binding name="OrderManagementServiceSoapBinding" type="tns:OrderManagementPortType">
+        <soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
+
+        <wsdl:operation name="createOrder">
+            <soap:operation soapAction="http://legacy.acme.com/ordermanagement/createOrder"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+            <wsdl:fault name="OrderFault"><soap:fault name="OrderFault" use="literal"/></wsdl:fault>
+        </wsdl:operation>
+
+        <wsdl:operation name="getOrderStatus">
+            <soap:operation soapAction="http://legacy.acme.com/ordermanagement/getOrderStatus"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+            <wsdl:fault name="OrderFault"><soap:fault name="OrderFault" use="literal"/></wsdl:fault>
+        </wsdl:operation>
+
+        <wsdl:operation name="getOrderDetails">
+            <soap:operation soapAction="http://legacy.acme.com/ordermanagement/getOrderDetails"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+            <wsdl:fault name="OrderFault"><soap:fault name="OrderFault" use="literal"/></wsdl:fault>
+        </wsdl:operation>
+
+        <wsdl:operation name="updateOrder">
+            <soap:operation soapAction="http://legacy.acme.com/ordermanagement/updateOrder"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+            <wsdl:fault name="OrderFault"><soap:fault name="OrderFault" use="literal"/></wsdl:fault>
+        </wsdl:operation>
+
+        <wsdl:operation name="cancelOrder">
+            <soap:operation soapAction="http://legacy.acme.com/ordermanagement/cancelOrder"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+            <wsdl:fault name="OrderFault"><soap:fault name="OrderFault" use="literal"/></wsdl:fault>
+        </wsdl:operation>
+
+        <wsdl:operation name="listOrdersByCustomer">
+            <soap:operation soapAction="http://legacy.acme.com/ordermanagement/listOrdersByCustomer"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+            <wsdl:fault name="OrderFault"><soap:fault name="OrderFault" use="literal"/></wsdl:fault>
+        </wsdl:operation>
+
+        <wsdl:operation name="getAllCustomers">
+            <soap:operation soapAction="http://legacy.acme.com/ordermanagement/getAllCustomers"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+            <wsdl:fault name="OrderFault"><soap:fault name="OrderFault" use="literal"/></wsdl:fault>
+        </wsdl:operation>
+
+        <wsdl:operation name="createCustomer">
+            <soap:operation soapAction="http://legacy.acme.com/ordermanagement/createCustomer"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+            <wsdl:fault name="OrderFault"><soap:fault name="OrderFault" use="literal"/></wsdl:fault>
+        </wsdl:operation>
+
+        <wsdl:operation name="getAllProducts">
+            <soap:operation soapAction="http://legacy.acme.com/ordermanagement/getAllProducts"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+            <wsdl:fault name="OrderFault"><soap:fault name="OrderFault" use="literal"/></wsdl:fault>
+        </wsdl:operation>
+
+        <wsdl:operation name="createProduct">
+            <soap:operation soapAction="http://legacy.acme.com/ordermanagement/createProduct"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+            <wsdl:fault name="OrderFault"><soap:fault name="OrderFault" use="literal"/></wsdl:fault>
+        </wsdl:operation>
+
+    </wsdl:binding>
+
+    <!-- ================================================================= -->
+    <!-- SERVICE                                                           -->
+    <!-- ================================================================= -->
+    <wsdl:service name="OrderManagementService">
+        <wsdl:port name="OrderManagementServiceSoap11" binding="tns:OrderManagementServiceSoapBinding">
+            <soap:address location="http://localhost:8082/OrderManagementService/OrderManagementServiceSoap11"/>
+            <!--<soap:address location="https://order-management-soap-service-v2-m7euhp.5sc6y6-2.usa-e2.cloudhub.io/OrderManagementService/OrderManagementServiceSoap11"/> -->
+        </wsdl:port>
+    </wsdl:service>
+
+</wsdl:definitions>

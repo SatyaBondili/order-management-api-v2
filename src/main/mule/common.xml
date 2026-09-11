@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<error-handler name="globalError_Handler" doc:id="2d2c9fbe-3079-4246-81b0-a3baa1de3791" >
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="a3c20133-b880-4b4b-b2d7-19b174fd3004" >
+			<ee:transform doc:name="Transform Message" doc:id="cd0d22bc-50a9-46c6-a0b8-569b2869457e" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	error:{
+		message: "Internal Server Error"
+	}
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-propagate>
+	</error-handler>
+	<sub-flow name="sf-get-statuscode" doc:id="9dd188e2-6468-4a0d-91e4-add450a31b7c" >
+		<ee:transform doc:name="Get statusCode" doc:id="c8ad9ec5-c330-4313-8645-81ac979d4162" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="statusCode" ><![CDATA[%dw 2.0
+output application/json
+ns ns0 http://legacy.acme.com/ordermanagement/
+---
+payload.body.ns0#NoDataResponse.statusCode]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="sf-no-data-found" doc:id="c40fb2ef-29af-422f-b586-ad06bc2f436f" >
+		<ee:transform doc:name="No data response" doc:id="238907ea-bf49-4026-ba51-1dd170ac19f2" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "No Data Found"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+</mule>

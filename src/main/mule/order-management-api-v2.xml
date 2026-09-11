@@ -1,0 +1,590 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+	xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd">
+	<http:listener-config
+		name="order-management-api-v2-httpListenerConfig">
+		<http:listener-connection host="0.0.0.0"
+			port="${http.port}" />
+	</http:listener-config>
+	<apikit:config name="order-management-api-v2-config"
+		api="resource::b43c8ea6-81a5-4de6-8093-afa816ddf9de:order-management-api-v2:2.0.0:raml:zip:order-management-api-v2.raml"
+		outboundHeadersMapName="outboundHeaders"
+		httpStatusVarName="httpStatus" />
+	<api-gateway:autodiscovery apiId="${api.id}"
+		ignoreBasePath="true" doc:name="API Autodiscovery"
+		doc:id="5044c5b3-8c70-4144-9d17-19f855c92826"
+		flowRef="order-management-api-v2-main" />
+	<flow name="order-management-api-v2-main">
+        <http:listener config-ref="order-management-api-v2-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="order-management-api-v2-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="put:\orders\(orderId):application\json:order-management-api-v2-config">
+        <ee:transform doc:name="Prepare SOAP Payload">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+
+ns ns0 http://legacy.acme.com/ordermanagement/
+
+---
+ns0#UpdateOrderRequest: {
+    ns0#orderId: attributes.uriParams.orderId,
+    ns0#customerId: payload.customerId,
+
+    ns0#items: {
+        (payload.items map (item) -> {
+            ns0#item: {
+                ns0#productId: item.productId,
+                ns0#productName: item.productName,
+                ns0#quantity: item.quantity,
+                ns0#unitPrice: item.unitPrice
+            }
+        })
+    },
+
+    ns0#shippingAddress: {
+        ns0#line1: payload.shippingAddress.line1,
+        ns0#city: payload.shippingAddress.city,
+        ns0#state: payload.shippingAddress.state,
+        ns0#postalCode: payload.shippingAddress.postalCode,
+        ns0#country: payload.shippingAddress.country
+    }
+}]]></ee:set-payload>
+            </ee:message>
+            <ee:variables />
+        </ee:transform>
+        <wsc:consume doc:name="updateOrder" doc:id="53df37ee-22ac-421e-a318-1da0bddc11c3" config-ref="Web_Service_Consumer_Config" operation="updateOrder"/>
+		<ee:transform doc:name="SOAP Response to JSON">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+ns soap http://schemas.xmlsoap.org/soap/envelope/
+ns ns0 http://legacy.acme.com/ordermanagement/
+---
+{
+	orderId: payload.soap#Body.ns0#UpdateOrderResponse.orderId,
+	status: payload.soap#Body.ns0#UpdateOrderResponse.status,
+	message: payload.soap#Body.ns0#UpdateOrderResponse.message
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\health:order-management-api-v2-config">
+        <ee:transform doc:name="Transform Message" doc:id="db817ccb-f3df-44f2-9b59-e33406794d32">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  status: "UP"
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\orders\(orderId)\status:order-management-api-v2-config">
+        <ee:transform doc:name="Prepare SOAP Payload">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xml writeDeclaration=true, encoding="UTF-8"
+
+ns legacy http://legacy.acme.com/ordermanagement/
+
+---
+{
+    legacy#GetOrderStatusRequest: {
+        orderId: attributes.uriParams.orderId
+    }
+}]]></ee:set-payload>
+            </ee:message>
+            <ee:variables />
+        </ee:transform>
+        <wsc:consume operation="getOrderStatus" doc:name="getOrderStatus" doc:id="bec9a83f-2fe9-498a-8c3d-e033778aece3" config-ref="Web_Service_Consumer_Config" />
+		<flow-ref doc:name="sf-get-statuscode" doc:id="329edbcb-454d-4fe0-b61a-838b705928a5" name="sf-get-statuscode" />
+		<choice doc:name="Choice" doc:id="92304b4f-ed8e-4d44-979a-fb221082a074" >
+			<when expression="#[vars.statusCode == 204]" >
+				<flow-ref doc:name="sf-no-data-found" doc:id="80ea2058-e3d9-42ff-8bf1-24b5fa8c6d07" name="sf-no-data-found" />
+			</when>
+			<otherwise>
+				<ee:transform doc:name="SOAP Response to JSON">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+
+ns soap http://schemas.xmlsoap.org/soap/envelope/
+ns ns0 http://legacy.acme.com/ordermanagement/
+---
+
+{
+    orderId: payload.soap#Body.ns0#GetOrderStatusResponse.orderId,
+    status: payload.soap#Body.ns0#GetOrderStatusResponse.status
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
+    <flow name="get:\orders\(orderId):order-management-api-v2-config">
+        <ee:transform doc:name="Prepare SOAP Payload">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xml writeDeclaration=true, encoding="UTF-8"
+
+ns legacy http://legacy.acme.com/ordermanagement/
+
+---
+{
+    legacy#GetOrderDetailsRequest: {
+        orderId: attributes.uriParams.orderId
+    }
+}]]></ee:set-payload>
+            </ee:message>
+            <ee:variables />
+        </ee:transform>
+        <wsc:consume operation="getOrderDetails" doc:name="getOrderDetails" doc:id="f18b5da9-647b-4111-b988-e72e300eceea" config-ref="Web_Service_Consumer_Config" />
+		<flow-ref doc:name="sf-get-statuscode" doc:id="c4dfb298-8531-4dcc-bbc7-f6a8847ba189" name="sf-get-statuscode" />
+		<choice doc:name="Choice" doc:id="99af276e-7467-46e0-b42f-7fb4c57ee84b" >
+			<when expression="#[vars.statusCode == 204]" >
+				<flow-ref doc:name="sf-no-data-found" doc:id="11bb146b-c209-4d48-8972-06fa31ce5629" name="sf-no-data-found" />
+			</when>
+			<otherwise>
+				<ee:transform doc:name="SOAP Response to JSON">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+
+ns soap http://schemas.xmlsoap.org/soap/envelope/
+ns ns0 http://legacy.acme.com/ordermanagement/
+
+var response = payload.soap#Body.ns0#GetOrderDetailsResponse
+---
+
+{
+    orderId: response.orderId as String,
+    customerId: response.customerId default "",
+    orderDate: (response.orderDate as DateTime) as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"},
+    status: response.status as String,
+    totalAmount: response.totalAmount as Number,
+    currency: response.currency as String,
+
+    shippingAddress: {
+        line1: response.shippingAddress.line1 as String,
+        city: response.shippingAddress.city as String,
+        state: response.shippingAddress.state as String,
+        postalCode: response.shippingAddress.postalCode as String,
+        country: response.shippingAddress.country as String
+    },
+
+    items: response.items.*item map (item) -> {
+        productId: item.productId as String,
+        productName: item.productName as String,
+        quantity: item.quantity as Number,
+        unitPrice: item.unitPrice as Number
+    }
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
+    
+    <flow name="get:\orders:order-management-api-v2-config">
+        <ee:transform doc:name="Prepare SOAP Request Payload" doc:id="0d77448e-d648-4d3a-ae1d-63d54bc050ca">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xml writeDeclaration=true, encoding="UTF-8"
+
+ns legacy http://legacy.acme.com/ordermanagement/
+
+---
+{
+    legacy#ListOrdersByCustomerRequest: {
+        customerId: attributes.queryParams.customerId
+    }
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <wsc:consume operation="listOrdersByCustomer" doc:name="listOrdersByCustomer" doc:id="f0bc4b57-01a2-40b2-8553-18b27430d65f" config-ref="Web_Service_Consumer_Config" />
+		<flow-ref doc:name="sf-get-statuscode" doc:id="8625211f-8167-4fd7-a1b8-fd56d1ca0fa1" name="sf-get-statuscode" />
+		<choice doc:name="Choice" doc:id="31540ffb-5b7a-4274-9c89-bc0265c1e0a7" >
+			<when expression="#[vars.statusCode == 204]" >
+				<flow-ref doc:name="sf-no-data-found" doc:id="e7002a4a-84c3-4223-badf-5d47e21858cd" name="sf-no-data-found" />
+			</when>
+			<otherwise>
+				<ee:transform doc:name="SOAP Response to JSON">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+
+ns soap http://schemas.xmlsoap.org/soap/envelope/
+ns ord http://legacy.acme.com/ordermanagement/
+
+fun toOrder(order) = {
+    orderId: order.orderId as String,
+    customerId: order.customerId as String,
+    orderDate: ((order.orderDate as LocalDateTime) as String {
+        format: "yyyy-MM-dd'T'HH:mm:ss"
+    }) ++ "Z",
+    status: order.status as String,
+    totalAmount: order.totalAmount as Number,
+    currency: order.currency as String,
+
+    shippingAddress: {
+        line1: order.shippingAddress.line1 as String,
+        city: order.shippingAddress.city as String,
+        state: order.shippingAddress.state as String,
+        postalCode: order.shippingAddress.postalCode as String,
+        country: order.shippingAddress.country as String
+    },
+
+    items: (order.*items.item default []) map (item) -> {
+        productId: item.productId as String,
+        productName: item.productName as String,
+        quantity: item.quantity as Number,
+        unitPrice: item.unitPrice as Number
+    }
+}
+
+var response =
+    payload.soap#Body.ord#ListOrdersByCustomerResponse
+
+---
+{
+    orders: response.orders.*order map toOrder($)
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
+    
+    <flow name="post:\orders\(orderId)\cancel:application\json:order-management-api-v2-config">
+<ee:transform doc:name="Prepare SOAP Payload">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xml writeDeclaration=true, encoding="UTF-8"
+
+ns legacy http://legacy.acme.com/ordermanagement/
+
+---
+{
+    legacy#CancelOrderRequest: {
+        orderId: attributes.uriParams.orderId,
+        cancellationReason: payload.cancellationReason
+    }
+}]]></ee:set-payload>
+            </ee:message>
+            <ee:variables />
+        </ee:transform>
+        <wsc:consume operation="cancelOrder" doc:name="cancelOrder" doc:id="9f62246e-1e30-4fbf-8986-7d63a0d2c24c" config-ref="Web_Service_Consumer_Config" />
+        <ee:transform doc:name="SOAP Response to JSON">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+ns soap http://schemas.xmlsoap.org/soap/envelope/
+ns ns0 http://legacy.acme.com/ordermanagement/
+var response = payload.soap#Body.ns0#CancelOrderResponse
+---
+{
+	orderId: response.orderId,
+	status: response.status,
+	message: response.message
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    
+    <flow name="post:\orders:application\json:order-management-api-v2-config">
+ <ee:transform doc:name="Prepare SOAP Request Payload" doc:id="6321b89d-a9ef-4039-aa85-0e88fb68e097">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xml writeDeclaration = true, encoding = "UTF-8"
+ns ord http://legacy.acme.com/ordermanagement/
+---
+ord#CreateOrderRequest: {
+	ord#customerId: payload.customerId,
+	ord#items: {
+		(payload.items map (item) -> {
+			ord#item: {
+				ord#productId: item.productId,
+				ord#productName: item.productName,
+				ord#quantity: item.quantity,
+				ord#unitPrice: item.unitPrice
+			}
+		})
+	},
+	ord#shippingAddress: {
+		ord#line1: payload.shippingAddress.line1,
+		ord#city: payload.shippingAddress.city,
+		ord#state: payload.shippingAddress.state,
+		ord#postalCode: payload.shippingAddress.postalCode,
+		ord#country: payload.shippingAddress.country
+	},
+	ord#currency: payload.currency
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <wsc:consume doc:name="createOrder" doc:id="41c214ac-3601-4a12-bfb4-80c71a3b9a70" config-ref="Web_Service_Consumer_Config" operation="createOrder" />
+        <ee:transform doc:name="SOAP Response to JSON">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+ns soap http://schemas.xmlsoap.org/soap/envelope/
+ns ns0 http://legacy.acme.com/ordermanagement/
+var response = payload.soap#Body.ns0#CreateOrderResponse
+---
+{
+  orderId: response.orderId,
+  status: response.status,
+  confirmationMessage: response.confirmationMessage,
+  totalAmount: response.totalAmount
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\customers:application\json:order-management-api-v2-config">
+<ee:transform doc:name="Prepare SOAP Request Payload">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns soapenv http://schemas.xmlsoap.org/soap/envelope/
+ns ns0 http://legacy.acme.com/ordermanagement/
+---
+ns0#CreateCustomerRequest: {
+	ns0#firstName: payload.firstName,
+	ns0#lastName: payload.lastName,
+	ns0#email: payload.email,
+	ns0#phone: payload.phone
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<wsc:consume doc:name="createCustomer" doc:id="f898bf6a-8108-4b5d-82ae-aaab6eed0047" config-ref="Web_Service_Consumer_Config" operation="createCustomer"/>
+		<ee:transform doc:name="SOAP Response to JSON" doc:id="ea1c471a-6b46-455d-9ab6-b8c4d6daf4f7">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+ns ns0 http://legacy.acme.com/ordermanagement/
+---
+{
+    customerId: payload.body.ns0#CreateCustomerResponse.customerId,
+    confirmationMessage: payload.body.ns0#CreateCustomerResponse.confirmationMessage
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+    <flow name="post:\products:application\json:order-management-api-v2-config">
+<ee:transform doc:name="Prepare SOAP Request Payload">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns soapenv http://schemas.xmlsoap.org/soap/envelope/
+ns ns0 http://legacy.acme.com/ordermanagement/
+---
+ns0#CreateProductRequest: {
+	ns0#sku: payload.sku,
+	ns0#productName: payload.productName,
+	(ns0#description: payload.description) if (payload.description?),
+	ns0#unitPrice: payload.unitPrice as Number,
+	ns0#active: (payload.active default true) as Boolean
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<wsc:consume doc:name="createProduct" doc:id="bae3e6de-1e3a-4d89-906e-808d2901b3c5" config-ref="Web_Service_Consumer_Config" operation="createProduct"/>
+		<ee:transform doc:name="SOAP Response to JSON" doc:id="0c8fed8b-50cf-470f-93e7-4b92cc9ed52f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+ns ns0 http://legacy.acme.com/ordermanagement/
+---
+{
+    productId: payload.body.ns0#CreateProductResponse.ns0#productId,
+    status: payload.body.ns0#CreateProductResponse.ns0#status
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+    <flow name="get:\customers:order-management-api-v2-config">
+        <ee:transform doc:name="Prepare SOAP Request Payload" doc:id="b5984a40-c02b-4e5d-a58b-938a0af35834" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns soapenv http://schemas.xmlsoap.org/soap/envelope/
+ns ns0 http://legacy.acme.com/ordermanagement/
+---
+ns0#GetAllCustomersRequest: {
+	(ns0#pageNumber: attributes.queryParams.pageNumber as Number) if (attributes.queryParams.pageNumber?),
+	(ns0#pageSize: attributes.queryParams.pageSize as Number) if (attributes.queryParams.pageSize?)
+}
+    
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<wsc:consume operation="getAllCustomers" doc:name="getAllCustomers" doc:id="67afcd0e-3425-40cb-b497-c33b855ad05c" config-ref="Web_Service_Consumer_Config"/>
+		<flow-ref doc:name="sf-get-statuscode" doc:id="9f24629d-5679-443a-9cf5-18cd74c41a41" name="sf-get-statuscode" />
+		<choice doc:name="Choice" doc:id="d37f0595-5947-4b75-ba40-e8de5d32c992" >
+			<when expression="#[vars.statusCode == 204]">
+				<flow-ref doc:name="sf-no-data-found" doc:id="2c1ec6cc-9f10-424f-af5d-2188698fe739" name="sf-no-data-found"/>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="SOAP Response to JSON">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+ns ns0 http://legacy.acme.com/ordermanagement/
+---
+{
+	customers: payload.body.ns0#GetAllCustomersResponse.customers.*customer map (c) -> {
+		customerId: c.customerId,
+		firstName: c.firstName,
+		lastName: c.lastName,
+		email: c.email,
+		phone: c.phone
+	},
+	totalCount: payload.body.ns0#GetAllCustomersResponse.totalCount as Number
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
+    <flow name="get:\products:order-management-api-v2-config">
+<ee:transform doc:name="Prepare SOAP Request Payload" doc:id="ac5c3742-1f8a-44a3-b5a0-4fbdac7758eb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns soapenv http://schemas.xmlsoap.org/soap/envelope/
+ns ns0 http://legacy.acme.com/ordermanagement/
+---
+ns0#GetAllProductsRequest: {
+	(ns0#activeOnly: message.attributes.queryParams.activeOnly as Boolean) if (message.attributes.queryParams.activeOnly?),
+	(ns0#pageNumber: message.attributes.queryParams.pageNumber as Number) if (message.attributes.queryParams.pageNumber?),
+	(ns0#pageSize: message.attributes.queryParams.pageSize as Number) if (message.attributes.queryParams.pageSize?)
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<wsc:consume doc:name="getAllProducts" doc:id="27542d4b-df59-4a66-a342-1529b7567764" config-ref="Web_Service_Consumer_Config" operation="getAllProducts"/>
+		<flow-ref doc:name="sf-get-statuscode" doc:id="67b279d9-a6d3-407d-bdf7-e52816ceb14a" name="sf-get-statuscode"/>
+		<choice doc:name="Choice" doc:id="d99f80c9-6064-40a1-bc3b-92304c532c64" >
+			<when expression="#[vars.statusCode == 204]">
+				<flow-ref doc:name="sf-no-data-found" doc:id="00f378f4-9489-45b7-a7ef-4d59578ea956" name="sf-no-data-found" />
+			</when>
+			<otherwise >
+				<ee:transform doc:name="SOAP Response to JSON" doc:id="ebdecc4c-4381-4f5a-87e3-9f9dac19edbb">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+ns ns0 http://legacy.acme.com/ordermanagement/
+---
+{
+    products: payload.body.ns0#GetAllProductsResponse.products.*product map (p) -> {
+        productId: p.productId,
+        productName: p.productName,
+        unitPrice: p.unitPrice as Number,
+        description: p.description,
+        sku: p.sku,
+        active: p.active as Boolean
+    },
+    totalCount: payload.body.ns0#GetAllProductsResponse.totalCount  default 0 as Number
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
+</mule>
